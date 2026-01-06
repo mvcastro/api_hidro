@@ -81,4 +81,17 @@ type Estado = Literal[
     "SP",
     "SE",
     "TO",
+    # Internacionais
+    "AR", # Argentina
+    "BO", # Bolivia
+    "CH", # Chile
+    "CO", # Colombia
+    "EQ", # Equador
+    "GF", # Guiana Francesa
+    "GU", # Guiana
+    "PG", # Paraguai
+    "PU", # Peru
+    "SU", # Suriname
+    "UR", # Uruguay
+    "VE", # Venezuela
 ]

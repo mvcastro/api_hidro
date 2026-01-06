@@ -1,6 +1,8 @@
 import asyncio
 from datetime import datetime, timedelta
 
+from api_hidro.async_requests.models import DadoTelemetricaAdotada
+from api_hidro.errors import TimeSerieNotFoundError
 from api_hidro.sync_request import http_get_sync
 from api_hidro.token_authentication import token_auth
 from api_hidro.types import IntervaloDeBusca, JSONList, TipoFiltroData, TipoTelemetrica
@@ -27,7 +29,7 @@ async def __retorna_serie_telemetrica_async(
     return data["items"]  # type: ignore
 
 
-async def retorna_serie_historica_telemetrica(
+async def __retorna_serie_historica_telemetrica(
     codigoestacao: int,
     tipo_telemetrica: TipoTelemetrica,
     tipo_filtro_data: TipoFiltroData,
@@ -83,3 +85,63 @@ async def retorna_serie_historica_telemetrica(
         data = [i for i in result if i]
 
     return flatten_concatenation(data)
+
+
+def retorna_serie_historica_telemetrica(
+    codigoestacao: int,
+    tipo_telemetrica: TipoTelemetrica,
+    tipo_filtro_data: TipoFiltroData,
+    data_inicial: str,
+    data_final: str,
+    intervalo_busca: IntervaloDeBusca,
+) -> JSONList | None:
+    return asyncio.run(
+        __retorna_serie_historica_telemetrica(
+            codigoestacao,
+            tipo_telemetrica,
+            tipo_filtro_data,
+            data_inicial,
+            data_final,
+            intervalo_busca,
+        )
+    )
+
+
+def serie_historica_telemetrica_adotada(
+    codigoestacao: int,
+    data_inicial: str,
+    data_final: str,
+    intervalo_busca: IntervaloDeBusca = "HORA_24",
+) -> list[DadoTelemetricaAdotada]:
+    """_summary_
+
+    Args:
+        codigoestacao (int): _description_
+        data_inicial (str): _description_
+        data_final (str): _description_
+        intervalo_busca (IntervaloDeBusca): _description_
+
+    Raises:
+        TimeSerieNotFoundError: _description_
+
+    Returns:
+        DadoTelemetricaAdotada: _description_
+    """
+    dados_telemetrica = retorna_serie_historica_telemetrica(
+        codigoestacao,
+        "Adotada",
+        "DATA_LEITURA",
+        data_inicial,
+        data_final,
+        intervalo_busca,
+    )
+
+    if not dados_telemetrica:
+        raise TimeSerieNotFoundError(
+            f"Série histórica telemétrica adotada não encontrada para o código da estação {codigoestacao}."
+        )
+
+    return [
+        DadoTelemetricaAdotada.model_validate(item, by_alias=True)
+        for item in dados_telemetrica
+    ]

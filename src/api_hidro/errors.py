@@ -8,6 +8,16 @@ class TokenNotFoundError(Exception):
         self.message = message
 
 
-class ArgsNotGiven(Exception):
+class ArgsNotGivenError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+class InventoryNotFoundError(Exception):
+    def __init__(self, message):
+        self.message = message
+        
+        
+class TimeSerieNotFoundError(Exception):
     def __init__(self, message):
         self.message = message

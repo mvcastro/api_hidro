@@ -1,12 +1,13 @@
 import asyncio
 from typing import cast
 
+from api_hidro.async_requests.models import Inventario
 from api_hidro.constants import BACIAS
 from api_hidro.sync_request import http_get_sync
 from api_hidro.types import CodigoBacia, Estado, JSONAPIResponse, JSONList
 from api_hidro.utils import flatten_concatenation
 
-from ..errors import ArgsNotGiven
+from ..errors import ArgsNotGivenError, InventoryNotFoundError
 from ..token_authentication import token_auth
 
 
@@ -31,7 +32,9 @@ async def __retorna_inventario(
     """
 
     if not any([codigoestacao, unidade_federativa, codigo_bacia]):
-        raise ArgsNotGiven("Pelo menos um dos campos de pesquisa deve ser fornecido!")
+        raise ArgsNotGivenError(
+            "Pelo menos um dos campos de pesquisa deve ser fornecido!"
+        )
 
     with token_auth as api_token:
         headers = {"Authorization": f"Bearer {api_token}"}
@@ -93,7 +96,9 @@ def retorna_inventario(
     """
 
     if not any([codigoestacao, unidade_federativa, codigo_bacia]):
-        raise ArgsNotGiven("Pelo menos um dos campos de pesquisa deve ser fornecido!")
+        raise ArgsNotGivenError(
+            "Pelo menos um dos campos de pesquisa deve ser fornecido!"
+        )
 
     response = asyncio.run(
         __retorna_inventario(
@@ -106,6 +111,26 @@ def retorna_inventario(
     return response["items"]
 
 
+def inventario_por_codigo_estacao(codigoestacao: int) -> Inventario:
+    """Retorna inventário da estação pelo código da estação
+
+    Args:
+        codigoestacao (int): Código da estação
+
+    Raises:
+        ValueError: Erro gerado quando não for encontrado nenhum dado
+
+    Returns:
+        Inventario: Objeto da Classe Inventario com os dados da estação
+    """
+    
+    inventario = retorna_inventario(codigoestacao=codigoestacao)
+    if not inventario:
+        raise InventoryNotFoundError(f"Nenhum inventário encontrado para o código da estação {codigoestacao}.")
+    print(inventario[0])
+    return Inventario.model_validate(inventario[0], by_alias=True)
+
+
 def retorna_inventario_completo() -> JSONList:
     """Retorna inventário completo das estações do HIDRO
 
@@ -114,3 +139,13 @@ def retorna_inventario_completo() -> JSONList:
     """
     result = asyncio.run(__retorna_inventario_completo())
     return result
+
+
+def inventario_completo() -> list[Inventario]:
+    """Retorna inventário completo das estações do HIDRO em uma lista de objetos Inventario
+
+    Returns:
+        list[Inventario]: Retorna uma lista com o inventário de todas as estação em formato JSON
+    """
+    result = retorna_inventario_completo()
+    return [Inventario.model_validate(item, by_alias=True) for item in result]
