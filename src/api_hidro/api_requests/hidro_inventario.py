@@ -1,22 +1,25 @@
 import asyncio
 from typing import cast
 
-from api_hidro.async_requests.models import Inventario
+from api_hidro.api_requests.models import Inventario
+from api_hidro.api_requests.sync_request import http_get_sync
 from api_hidro.constants import BACIAS
-from api_hidro.sync_request import http_get_sync
+from api_hidro.token_authentication import TokenAuthHandler
 from api_hidro.types import CodigoBacia, Estado, JSONAPIResponse, JSONList
 from api_hidro.utils import flatten_concatenation
 
 from ..errors import ArgsNotGivenError, InventoryNotFoundError
-from ..token_authentication import token_auth
 
 
 async def __retorna_inventario(
+    token_auth: TokenAuthHandler,
     codigoestacao: int | None = None,
     unidade_federativa: Estado | None = None,
     codigo_bacia: CodigoBacia | None = None,
 ) -> JSONAPIResponse:
-    """Retorna Inventário da estação selecionada.
+    """
+    Função privada do módulo
+    Retorna Inventário da estação selecionada.
         Pelo menos unm dos argumentos da função deve ser fornecida
 
     Args:
@@ -50,15 +53,22 @@ async def __retorna_inventario(
     return cast(JSONAPIResponse, data)
 
 
-async def __retorna_inventario_completo() -> JSONList:
-    """Retorna inventário completo das estações do HIDRO
+async def __retorna_inventario_completo(token_auth: TokenAuthHandler) -> JSONList:
+    """
+    Função privada do módulo
+    Retorna inventário completo das estações do HIDRO
 
     Returns:
         JSONList: Retorna uma lista com o inventário de todas as estação em formato JSON
     """
 
     result = await asyncio.gather(
-        *[__retorna_inventario(codigo_bacia=bacia["codigobacia"]) for bacia in BACIAS]
+        *[
+            __retorna_inventario(
+                token_auth=token_auth, codigo_bacia=bacia["codigobacia"]
+            )
+            for bacia in BACIAS
+        ]
     )
 
     if not result:
@@ -76,12 +86,15 @@ async def __retorna_inventario_completo() -> JSONList:
 
 
 def retorna_inventario(
+    token_auth: TokenAuthHandler,
     codigoestacao: int | None = None,
     unidade_federativa: Estado | None = None,
     codigo_bacia: CodigoBacia | None = None,
 ) -> JSONList:
-    """Retorna Inventário da estação selecionada.
-        Pelo menos unm dos argumentos da função deve ser fornecida
+    """
+    Retorna Inventário da estação selecionada no formato de lista
+        de dicionários Python.
+    Pelo menos unm dos argumentos da função deve ser fornecida
 
     Args:
         codigoestacao (int | None, optional): Código da estação. Defaults to None.
@@ -102,6 +115,7 @@ def retorna_inventario(
 
     response = asyncio.run(
         __retorna_inventario(
+            token_auth=token_auth,
             codigoestacao=codigoestacao,
             unidade_federativa=unidade_federativa,
             codigo_bacia=codigo_bacia,
@@ -111,8 +125,11 @@ def retorna_inventario(
     return response["items"]
 
 
-def inventario_por_codigo_estacao(codigoestacao: int) -> Inventario:
-    """Retorna inventário da estação pelo código da estação
+def inventario_por_codigo_estacao(
+    token_auth: TokenAuthHandler, codigoestacao: int
+) -> Inventario:
+    """
+    Retorna inventário da estação pelo código da estação no formato de objeto Inventario
 
     Args:
         codigoestacao (int): Código da estação
@@ -123,29 +140,33 @@ def inventario_por_codigo_estacao(codigoestacao: int) -> Inventario:
     Returns:
         Inventario: Objeto da Classe Inventario com os dados da estação
     """
-    
-    inventario = retorna_inventario(codigoestacao=codigoestacao)
+
+    inventario = retorna_inventario(token_auth=token_auth, codigoestacao=codigoestacao)
     if not inventario:
-        raise InventoryNotFoundError(f"Nenhum inventário encontrado para o código da estação {codigoestacao}.")
-    print(inventario[0])
+        raise InventoryNotFoundError(
+            f"Nenhum inventário encontrado para o código da estação {codigoestacao}."
+        )
     return Inventario.model_validate(inventario[0], by_alias=True)
 
 
-def retorna_inventario_completo() -> JSONList:
-    """Retorna inventário completo das estações do HIDRO
+def retorna_inventario_completo(token_auth: TokenAuthHandler) -> JSONList:
+    """
+    Retorna inventário completo das estações do HIDRO em formato de lista
+        de dicionários Python
 
     Returns:
         JSONList: Retorna uma lista com o inventário de todas as estação em formato JSON
     """
-    result = asyncio.run(__retorna_inventario_completo())
+    result = asyncio.run(__retorna_inventario_completo(token_auth=token_auth))
     return result
 
 
-def inventario_completo() -> list[Inventario]:
-    """Retorna inventário completo das estações do HIDRO em uma lista de objetos Inventario
+def inventario_completo(token_auth: TokenAuthHandler) -> list[Inventario]:
+    """
+    Retorna inventário completo das estações do HIDRO em uma lista de objetos Inventario
 
     Returns:
         list[Inventario]: Retorna uma lista com o inventário de todas as estação em formato JSON
     """
-    result = retorna_inventario_completo()
+    result = retorna_inventario_completo(token_auth=token_auth)
     return [Inventario.model_validate(item, by_alias=True) for item in result]

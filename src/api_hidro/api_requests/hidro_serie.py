@@ -1,15 +1,16 @@
+from api_hidro.api_requests.sync_request import http_get_sync
 import asyncio
 from datetime import datetime
 from typing import Literal, cast
 
-from api_hidro.async_requests.models import (
+
+from api_hidro.api_requests.models import (
     DadosDoMesChuva,
     DadosDoMesCota,
     DadosDoMesVazao,
 )
 from api_hidro.errors import TimeSerieNotFoundError
-from api_hidro.sync_request import http_get_sync
-from api_hidro.token_authentication import token_auth
+from api_hidro.token_authentication import TokenAuthHandler
 from api_hidro.types import JSONList
 from api_hidro.utils import flatten_concatenation
 
@@ -17,27 +18,32 @@ TipoDeEstacao = Literal["Chuva", "Cota", "Vazao"]
 
 
 async def __retorna_serie_anual(
-    api_token: str,
+    token_auth: TokenAuthHandler,
     codigoestacao: int,
     tipo_estacao: TipoDeEstacao,
     data_inicial: str,
     data_final: str,
 ) -> JSONList:
-    headers = {"Authorization": f"Bearer {api_token}"}
-    url = f"https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/HidroSerie{tipo_estacao}/v1"
-    params: dict[str, int | str | float | bool | None] = {
-        "Código da Estação": codigoestacao,
-        "Tipo Filtro Data": "DATA_LEITURA",
-        "Data Inicial (yyyy-MM-dd)": data_inicial,
-        "Data Final (yyyy-MM-dd)": data_final,
-    }
-    data = await asyncio.to_thread(http_get_sync, url, headers, params)
+    with token_auth as api_token:
+        headers = {"Authorization": f"Bearer {api_token}"}
+        url = f"https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/HidroSerie{tipo_estacao}/v1"
+        params: dict[str, int | str | float | bool | None] = {
+            "Código da Estação": codigoestacao,
+            "Tipo Filtro Data": "DATA_LEITURA",
+            "Data Inicial (yyyy-MM-dd)": data_inicial,
+            "Data Final (yyyy-MM-dd)": data_final,
+        }
+        data = await asyncio.to_thread(http_get_sync, url, headers, params)
 
     return cast(JSONList, data["items"])
 
 
 async def __retorna_serie_historica(
-    codigoestacao: int, tipo_estacao: TipoDeEstacao, data_inicial: str, data_final: str
+    token_auth: TokenAuthHandler,
+    codigoestacao: int,
+    tipo_estacao: TipoDeEstacao,
+    data_inicial: str,
+    data_final: str,
 ) -> JSONList | None:
     """Retorna Série Histórica da estação escolhida
 
@@ -50,35 +56,37 @@ async def __retorna_serie_historica(
     Returns:
         JSONList: Série histórica no formato JSON
     """
-    
+
     dt_inicial = datetime.strptime(data_inicial, "%Y-%m-%d").date()
     dt_final = datetime.strptime(data_final, "%Y-%m-%d").date()
 
     if dt_final < dt_inicial:
         raise ValueError("Data final não pode ser menor que data inicial")
 
-    with token_auth as api_token:
+    result = await asyncio.gather(
+        *[
+            __retorna_serie_anual(
+                token_auth,
+                codigoestacao,
+                tipo_estacao,
+                f"{ano}-01-01",
+                f"{ano}-12-31",
+            )
+            for ano in range(dt_inicial.year, dt_final.year + 1)
+        ]
+    )
 
-        result = await asyncio.gather(
-            *[
-                __retorna_serie_anual(
-                    api_token,
-                    codigoestacao,
-                    tipo_estacao,
-                    f"{ano}-01-01",
-                    f"{ano}-12-31",
-                )
-                for ano in range(dt_inicial.year, dt_final.year + 1)
-            ]
-        )
-
-        data = [json_obj for json_obj in result if json_obj]
+    data = [json_obj for json_obj in result if json_obj]
 
     return flatten_concatenation(data)
 
 
 def retorna_serie_historica(
-    codigoestacao: int, tipo_estacao: TipoDeEstacao, data_inicial: str, data_final: str
+    token_auth: TokenAuthHandler,
+    codigoestacao: int,
+    tipo_estacao: TipoDeEstacao,
+    data_inicial: str,
+    data_final: str,
 ) -> JSONList | None:
     """Retorna Série Histórica da estação escolhida
 
@@ -93,12 +101,14 @@ def retorna_serie_historica(
     """
 
     return asyncio.run(
-        __retorna_serie_historica(codigoestacao, tipo_estacao, data_inicial, data_final)
+        __retorna_serie_historica(
+            token_auth, codigoestacao, tipo_estacao, data_inicial, data_final
+        )
     )
 
 
 def serie_historica_chuva(
-    codigoestacao: int, data_inicial: str, data_final: str
+    token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
 ) -> list[DadosDoMesChuva] | None:
     """Retorna Série Histórica de Chuvas da estação escolhida
 
@@ -115,6 +125,7 @@ def serie_historica_chuva(
     """
 
     serie_diaria_chuva = retorna_serie_historica(
+        token_auth=token_auth,
         codigoestacao=codigoestacao,
         tipo_estacao="Chuva",
         data_inicial=data_inicial,
@@ -130,7 +141,7 @@ def serie_historica_chuva(
 
 
 def serie_historica_cota(
-    codigoestacao: int, data_inicial: str, data_final: str
+    token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
 ) -> list[DadosDoMesCota]:
     """Retorna Série Histórica de Cotas da estação escolhida
 
@@ -147,6 +158,7 @@ def serie_historica_cota(
     """
 
     serie_diaria_cota = retorna_serie_historica(
+        token_auth=token_auth,
         codigoestacao=codigoestacao,
         tipo_estacao="Cota",
         data_inicial=data_inicial,
@@ -162,7 +174,7 @@ def serie_historica_cota(
 
 
 def serie_historica_vazao(
-    codigoestacao: int, data_inicial: str, data_final: str
+    token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
 ) -> list[DadosDoMesVazao]:
     """Retorna Série Histórica de Vazões da estação escolhida
 
@@ -179,6 +191,7 @@ def serie_historica_vazao(
     """
 
     serie_diaria_vazao = retorna_serie_historica(
+        token_auth=token_auth,
         codigoestacao=codigoestacao,
         tipo_estacao="Vazao",
         data_inicial=data_inicial,
@@ -190,4 +203,7 @@ def serie_historica_vazao(
             f"Série histórica de vazão não encontrada para o código da estação {codigoestacao}."
         )
 
-    return [DadosDoMesVazao.model_validate(item, by_alias=True) for item in serie_diaria_vazao]
+    return [
+        DadosDoMesVazao.model_validate(item, by_alias=True)
+        for item in serie_diaria_vazao
+    ]

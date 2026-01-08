@@ -1,3 +1,4 @@
+from abc import ABC
 from datetime import date, datetime
 from typing import Literal
 
@@ -156,7 +157,7 @@ class InventarioOriginalDaAPI(BaseModel):
     codigoestacao: int
 
 
-class DadoDiario(BaseModel):
+class _DadoDiario(BaseModel, ABC):
     codigoestacao: int
     data_hora_dado: datetime
     data_ultima_alteracao: datetime
@@ -179,7 +180,7 @@ class DadoDiario(BaseModel):
     )
 
 
-class DadosDoMesChuva(DadoDiario):
+class DadosDoMesChuva(_DadoDiario):
     chuva_01: float | None
     chuva_02: float | None
     chuva_03: float | None
@@ -248,7 +249,7 @@ class DadosDoMesChuva(DadoDiario):
     )
 
 
-class DadosDoMesCota(DadoDiario):
+class DadosDoMesCota(_DadoDiario):
     cota_01: float | None
     cota_02: float | None
     cota_03: float | None
@@ -317,7 +318,7 @@ class DadosDoMesCota(DadoDiario):
     )
 
 
-class DadosDoMesVazao(DadoDiario):
+class DadosDoMesVazao(_DadoDiario):
     vazao_01: float | None
     vazao_02: float | None
     vazao_03: float | None
@@ -386,7 +387,7 @@ class DadosDoMesVazao(DadoDiario):
     )
 
 
-class DadoTelemetricaAdotada(BaseModel):
+class _DadoTelemetrica(BaseModel, ABC):
     codigoestacao: int = Field(alias="codigoestacao")
     chuva_adotada: float | None
     chuva_adotada_status: bool | None
@@ -400,30 +401,25 @@ class DadoTelemetricaAdotada(BaseModel):
     model_config = ConfigDict(alias_generator=lambda s: s.title())
 
 
-class DadoTelemetricaDetalhada(BaseModel):
-    codigoestacao: int = Field(alias="codigoestacao")
+class DadoTelemetricaAdotada(_DadoTelemetrica):
+    model_config = ConfigDict(alias_generator=lambda s: s.title())
+
+
+class DadoTelemetricaDetalhada(_DadoTelemetrica):
     bateria: float | None
     chuva_acumulada: float | None
     chuva_acumulada_status: float | None
-    chuva_adotada: float | None
-    chuva_adotada_status: bool | None
-    cota_adotada: float | None
-    cota_adotada_status: bool | None
     cota_display: float | None
     cota_display_status: bool | None
     cota_manual: float | None
     cota_manual_status: bool | None
     cota_sensor: float | None
     cota_sensor_status: bool | None
-    data_atualizacao: datetime | None
-    data_hora_medicao: datetime | None
     pressao_atmosferica: float | None
     pressao_atmosferica_status: bool | None
     temperatura_agua: float | None
     temperatura_agua_status: bool | None
     temperatura_interna: float | None
-    vazao_adotada: float | None
-    vazao_adotada_status: bool | None
 
     model_config = ConfigDict(alias_generator=lambda s: s.title())
 

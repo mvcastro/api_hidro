@@ -5,7 +5,9 @@ import requests
 from api_hidro.types import JSONObject
 
 
-def http_get_sync(url: str, headers: dict[str, Any], params: JSONObject) -> dict[str, Any]:
+def http_get_sync(
+    url: str, headers: dict[str, Any], params: JSONObject
+) -> dict[str, Any]:
     response = requests.get(url, headers=headers, params=params)
 
     if response.status_code != 200:

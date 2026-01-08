@@ -1,28 +1,26 @@
-import os
 from datetime import datetime, timedelta
 
 import requests
-from dotenv import load_dotenv
-
-from .errors import CredentialsNotFoundError
+from pydantic.main import BaseModel
+from pydantic.types import SecretStr
 
 EXPIRATION_MINUTES = 30
 
 
+class AuthCredentials(BaseModel):
+    login: SecretStr
+    password: SecretStr
+
+
 class TokenAuthHandler:
-    def __init__(self):
-        self.token_auth = self.get_api_token()
+    def __init__(self, auth_credentials: AuthCredentials):
+        self.__auth_credentials = auth_credentials
+        self.__token_auth = self.get_api_token()
         self.time_expire = datetime.now() + timedelta(minutes=EXPIRATION_MINUTES)
 
-    def get_credentials(self) -> tuple[str, str]:
-        load_dotenv()  # take environment variables from .env.
-        api_login = os.getenv("API_IDENTIFICADOR_HIDRO")
-        api_password = os.getenv("API_SENHA_HIDRO")
-
-        if api_login is None or api_password is None:
-            raise CredentialsNotFoundError(
-                "As credenciais não foram localizadas no arquio .env"
-            )
+    def __get_credentials(self) -> tuple[str, str]:
+        api_login = self.__auth_credentials.login.get_secret_value()
+        api_password = self.__auth_credentials.password.get_secret_value()
         return api_login, api_password
 
     def get_api_token(self) -> str:
@@ -30,7 +28,7 @@ class TokenAuthHandler:
         https://www.ana.gov.br/hidrowebservice/swagger-ui.html#/
         """
 
-        api_login, api_password = self.get_credentials()
+        api_login, api_password = self.__get_credentials()
         url_oauth = (
             "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/OAUth/v1"
         )
@@ -40,20 +38,17 @@ class TokenAuthHandler:
             response.raise_for_status()
 
         token_auth = response.json()["items"]["tokenautenticacao"]
-        os.environ["API_TOKEN_HIDRO"] = token_auth
+        # os.environ["API_TOKEN_HIDRO"] = token_auth
 
         return token_auth
 
     def refresh_token(self) -> None:
-        self.token_auth = self.get_api_token()
+        self.__token_auth = self.get_api_token()
         self.time_expire = datetime.now() + timedelta(minutes=EXPIRATION_MINUTES)
 
     def __enter__(self):
         if datetime.now() > self.time_expire:
             self.refresh_token()
-        return self.token_auth
+        return self.__token_auth
 
     def __exit__(self, exc_type, exc_value, traceback): ...
-
-
-token_auth = TokenAuthHandler()
