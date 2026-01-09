@@ -1,20 +1,20 @@
-from api_hidro.api_requests.sync_request import http_get_sync
+from api_hidro.models.api_response_models import JSONAPIResponse
 import asyncio
 from datetime import datetime
 from typing import Literal, cast
 
-
-from api_hidro.api_requests.models import (
+from api_hidro.api_requests.sync_request import http_get_sync
+from api_hidro.errors import TimeSerieNotFoundError
+from api_hidro.models.api_response_models import JSONList
+from api_hidro.models.models import (
     DadosDoMesChuva,
     DadosDoMesCota,
     DadosDoMesVazao,
 )
-from api_hidro.errors import TimeSerieNotFoundError
 from api_hidro.token_authentication import TokenAuthHandler
-from api_hidro.types import JSONList
 from api_hidro.utils import flatten_concatenation
 
-TipoDeEstacao = Literal["Chuva", "Cota", "Vazao"]
+TipoDeEstacao = Literal["Chuva", "Cotas", "Vazao"]
 
 
 async def __retorna_serie_anual(
@@ -23,7 +23,7 @@ async def __retorna_serie_anual(
     tipo_estacao: TipoDeEstacao,
     data_inicial: str,
     data_final: str,
-) -> JSONList:
+) -> JSONAPIResponse:
     with token_auth as api_token:
         headers = {"Authorization": f"Bearer {api_token}"}
         url = f"https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/HidroSerie{tipo_estacao}/v1"
@@ -35,7 +35,7 @@ async def __retorna_serie_anual(
         }
         data = await asyncio.to_thread(http_get_sync, url, headers, params)
 
-    return cast(JSONList, data["items"])
+    return cast(JSONAPIResponse, data)
 
 
 async def __retorna_serie_historica(
@@ -49,7 +49,7 @@ async def __retorna_serie_historica(
 
     Args:
         codigoestacao (int): Código da estação
-        tipo_estacao (TipoDeEstacao): Tipos -> 'Chuva', 'Cota', 'Vazao'
+        tipo_estacao (TipoDeEstacao): Tipos -> 'Chuva', 'Cotas', 'Vazao'
         data_inicial (str): Data no formato YYYY-MM-DD
         data_final (str): Data no formato YYYY-MM-DD
 
@@ -76,7 +76,7 @@ async def __retorna_serie_historica(
         ]
     )
 
-    data = [json_obj for json_obj in result if json_obj]
+    data = [json_obj.get("items") for json_obj in result if json_obj]
 
     return flatten_concatenation(data)
 
@@ -109,7 +109,7 @@ def retorna_serie_historica(
 
 def serie_historica_chuva(
     token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
-) -> list[DadosDoMesChuva] | None:
+) -> list[DadosDoMesChuva]:
     """Retorna Série Histórica de Chuvas da estação escolhida
 
     Args:

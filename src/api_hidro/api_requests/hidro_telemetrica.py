@@ -1,12 +1,12 @@
-from api_hidro.api_requests.models import DadoTelemetricaDetalhada
 import asyncio
 from datetime import datetime, timedelta
 
-from api_hidro.api_requests.models import DadoTelemetricaAdotada
 from api_hidro.api_requests.sync_request import http_get_sync
+from api_hidro.data_types import IntervaloDeBusca, TipoFiltroData, TipoTelemetrica
 from api_hidro.errors import TimeSerieNotFoundError
+from api_hidro.models.api_response_models import JSONList
+from api_hidro.models.models import DadoTelemetricaAdotada, DadoTelemetricaDetalhada
 from api_hidro.token_authentication import TokenAuthHandler
-from api_hidro.types import IntervaloDeBusca, JSONList, TipoFiltroData, TipoTelemetrica
 from api_hidro.utils import flatten_concatenation
 
 

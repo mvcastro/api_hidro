@@ -2,7 +2,7 @@ from typing import Any
 
 import requests
 
-from api_hidro.types import JSONObject
+from api_hidro.models.api_response_models import JSONObject
 
 
 def http_get_sync(

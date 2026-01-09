@@ -1,11 +1,14 @@
 import asyncio
 from typing import cast
 
-from api_hidro.api_requests.models import Inventario
 from api_hidro.api_requests.sync_request import http_get_sync
 from api_hidro.constants import BACIAS
+from api_hidro.data_types import CodigoBacia, DictInventarioDaAPI, Estado
+from api_hidro.models.api_response_models import (
+    JSONAPIResponse,
+)
+from api_hidro.models.models import Inventario
 from api_hidro.token_authentication import TokenAuthHandler
-from api_hidro.types import CodigoBacia, Estado, JSONAPIResponse, JSONList
 from api_hidro.utils import flatten_concatenation
 
 from ..errors import ArgsNotGivenError, InventoryNotFoundError
@@ -23,15 +26,16 @@ async def __retorna_inventario(
         Pelo menos unm dos argumentos da função deve ser fornecida
 
     Args:
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
         codigoestacao (int | None, optional): Código da estação. Defaults to None.
         unidade_federativa (str | None, optional): Sigla da Unidade Federativa. Defaults to None.
         codigo_bacia (int | None, optional): Código da Bacia. Defaults to None.
 
     Raises:
-        ArgsNotGiven: Erro gerado quando não for fornecido nenhum dos argumentos
+        ArgsNotGivenError: Erro gerado quando não for fornecido nenhum dos argumentos
 
     Returns:
-        JSONList: Retorna em uma lista, o inventário da estação em formato JSON
+        JSONAPIResponse: Retorna um dicionário lista, o inventário da estação em formato JSON
     """
 
     if not any([codigoestacao, unidade_federativa, codigo_bacia]):
@@ -53,13 +57,17 @@ async def __retorna_inventario(
     return cast(JSONAPIResponse, data)
 
 
-async def __retorna_inventario_completo(token_auth: TokenAuthHandler) -> JSONList:
+async def __retorna_inventario_completo(
+    token_auth: TokenAuthHandler,
+) -> list[DictInventarioDaAPI]:
     """
     Função privada do módulo
     Retorna inventário completo das estações do HIDRO
 
     Returns:
-        JSONList: Retorna uma lista com o inventário de todas as estação em formato JSON
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
+        JSONList: Retorna uma lista com o inventário de todas as estação em formato
+         de  dicionário Python (JSON da API).
     """
 
     result = await asyncio.gather(
@@ -74,11 +82,11 @@ async def __retorna_inventario_completo(token_auth: TokenAuthHandler) -> JSONLis
     if not result:
         raise ValueError("Nenhum dado retornado para o inventário completo.")
 
-    data: list[JSONList] = []
+    data: list[list[DictInventarioDaAPI]] = []
 
     for obj in result:
         if obj is not None:
-            json_obj = obj.get("items")
+            json_obj = cast(list[DictInventarioDaAPI], obj.get("items"))
             if json_obj:
                 data.append(json_obj)
 
@@ -90,22 +98,24 @@ def retorna_inventario(
     codigoestacao: int | None = None,
     unidade_federativa: Estado | None = None,
     codigo_bacia: CodigoBacia | None = None,
-) -> JSONList:
+) -> list[DictInventarioDaAPI]:
     """
     Retorna Inventário da estação selecionada no formato de lista
         de dicionários Python.
-    Pelo menos unm dos argumentos da função deve ser fornecida
+    Pelo menos unm dos argumentos da função deve ser fornecida.
 
     Args:
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
         codigoestacao (int | None, optional): Código da estação. Defaults to None.
         unidade_federativa (str | None, optional): Sigla da Unidade Federativa. Defaults to None.
         codigo_bacia (int | None, optional): Código da Bacia. Defaults to None.
 
     Raises:
-        ArgsNotGiven: Erro gerado quando não for fornecido nenhum dos argumentos
+        ArgsNotGivenError: Erro gerado quando não for fornecido nenhum dos argumentos.
 
     Returns:
-        JSONList: Retorna em uma lista, o inventário da estação em formato JSON
+        JSONList: Retorna em uma lista, o inventário da estação em formato de dicionário
+         Python (JSON da API).
     """
 
     if not any([codigoestacao, unidade_federativa, codigo_bacia]):
@@ -122,7 +132,7 @@ def retorna_inventario(
         )
     )
 
-    return response["items"]
+    return cast(list[DictInventarioDaAPI], response["items"])
 
 
 def inventario_por_codigo_estacao(
@@ -132,6 +142,7 @@ def inventario_por_codigo_estacao(
     Retorna inventário da estação pelo código da estação no formato de objeto Inventario
 
     Args:
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
         codigoestacao (int): Código da estação
 
     Raises:
@@ -149,21 +160,29 @@ def inventario_por_codigo_estacao(
     return Inventario.model_validate(inventario[0], by_alias=True)
 
 
-def retorna_inventario_completo(token_auth: TokenAuthHandler) -> JSONList:
+def retorna_inventario_completo(
+    token_auth: TokenAuthHandler,
+) -> list[DictInventarioDaAPI]:
     """
     Retorna inventário completo das estações do HIDRO em formato de lista
         de dicionários Python
+
+    Args:
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
 
     Returns:
         JSONList: Retorna uma lista com o inventário de todas as estação em formato JSON
     """
     result = asyncio.run(__retorna_inventario_completo(token_auth=token_auth))
-    return result
+    return cast(list[DictInventarioDaAPI], result)
 
 
 def inventario_completo(token_auth: TokenAuthHandler) -> list[Inventario]:
     """
     Retorna inventário completo das estações do HIDRO em uma lista de objetos Inventario
+
+    Args:
+        token_auth (TokenAuthHandler): Objeto da classe de autenticação de token.
 
     Returns:
         list[Inventario]: Retorna uma lista com o inventário de todas as estação em formato JSON

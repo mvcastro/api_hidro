@@ -1,5 +1,5 @@
 from typing import get_args
-from api_hidro.types import Bacia, Estado
+from api_hidro.data_types import Bacia, Estado
 
 
 ESTADOS: list[Estado] = list(get_args(Estado))

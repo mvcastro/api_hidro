@@ -8,7 +8,8 @@ A biblioteca **api_hidro** se destina a obter os dados das estações fluviomét
 - **Séries Históricas**: Dados históricos de chuva, cota e vazão
 - **Dados Telemétricos**: Medições em tempo real ou próximas ao tempo real com diferentes intervalos de amostragem
 
-A biblioteca utiliza autenticação por token OAuth para garantir acesso seguro aos dados da API HIDRO ANA.
+A biblioteca utiliza autenticação por token OAuth para garantir acesso seguro aos dados da API HIDRO ANA. Para 
+solicitar acesso à API confira as instruções contidas neste [link](https://www.snirh.gov.br/hidroweb/acesso-api).
 
 ---
 
@@ -16,7 +17,7 @@ A biblioteca utiliza autenticação por token OAuth para garantir acesso seguro 
 
 ### Pré-requisitos
 
-- Python 3.10 ou superior
+- Python 3.12 ou superior
 - Credenciais de acesso à API HIDRO ANA (login e senha)
 
 ### Instalando a Biblioteca
@@ -55,7 +56,7 @@ O token é automaticamente gerenciado pela biblioteca e renovado quando necessá
 
 #### `retorna_inventario()`
 
-Retorna o inventário (dados cadastrais) de estações de monitoramento. É possível filtrar por código da estação, unidade federativa ou código da bacia.
+Retorna o inventário (dados cadastrais) de estações de monitoramento. É possível filtrar por código da estação, unidade federativa ou código da bacia. Os campos do dicionário Python podem ser verificados na [documentação](https://www.ana.gov.br/hidrowebservice/swagger-ui/index.html#/WSEstacoesTelemetricasController/gethidroinventarioestacoes) da API.
 
 **Assinatura:**
 ```python
@@ -64,7 +65,7 @@ retorna_inventario(
     codigoestacao: int | None = None,
     unidade_federativa: str | None = None,
     codigo_bacia: int | None = None
-) -> list[dict]
+) -> list[dict[CampoInventario, str]]
 ```
 
 **Parâmetros:**
@@ -73,7 +74,7 @@ retorna_inventario(
 - `unidade_federativa`: (opcional) Sigla do estado (ex: "SP", "RJ", "MG")
 - `codigo_bacia`: (opcional) Código da bacia hidrográfica
 
-**Retorno:** Lista de dicionários com dados das estações
+**Retorno:** Lista de dicionários com dados das estações. Importante destacar que os valores dos campos estão no formato `str` por terem sido desserializados a partir do JSON da API.
 
 **Exceções:**
 - `ArgsNotGivenError`: Lançada quando nenhum filtro é fornecido
@@ -100,8 +101,8 @@ inventario_sp = retorna_inventario(
 # Exibir informações das estações
 for estacao in inventario_sp:
     print(f"Código: {estacao['codigoestacao']}")
-    print(f"Nome: {estacao['nomeestacao']}")
-    print(f"Rio: {estacao['nomerio']}")
+    print(f"Nome: {estacao['Estacao_Nome']}")
+    print(f"Rio: {estacao['Rio_Nome']}")
     print("---")
 
 # Buscar inventário de uma estação específica
@@ -115,7 +116,7 @@ inventario_especifico = retorna_inventario(
 
 #### `inventario_por_codigo_estacao()`
 
-Retorna os dados cadastrais de uma estação específica em formato de objeto estruturado `Inventario`.
+Retorna os dados cadastrais de uma estação específica em formato de objeto estruturado `Inventario`. Objetos da classe `Inventario` já apresentam os valores de seus atributos convertidos nos tipos corretos.
 
 **Assinatura:**
 ```python
@@ -154,8 +155,8 @@ inventario = inventario_por_codigo_estacao(
 )
 
 # Acessar as informações como objeto estruturado
-print(f"Nome da Estação: {inventario.nomeestacao}")
-print(f"Rio: {inventario.nomerio}")
+print(f"Nome da Estação: {inventario.estacao_nome}")
+print(f"Rio: {inventario.rio_nome}")
 print(f"Localização: {inventario.latitude}, {inventario.longitude}")
 ```
 
@@ -163,7 +164,7 @@ print(f"Localização: {inventario.latitude}, {inventario.longitude}")
 
 #### `inventario_completo()`
 
-Retorna o inventário completo de todas as estações monitoradas pela API HIDRO ANA em formato de objetos estruturados.
+Retorna o inventário completo de todas as estações monitoradas pela API HIDRO ANA em formato de objetos estruturados do tipo `Inventario`. Objetos da classe `Inventario` já apresentam os valores de seus atributos convertidos nos tipos corretos. Portanto, recomenda-se utilizar essa função para obtenção do inventário. Porém, caso haja preferência por dicionários Python idênticos ao JSON retornado pela API, pode-se utilizar a função descrita na sequência.
 
 **Assinatura:**
 ```python
@@ -173,7 +174,7 @@ inventario_completo(token_auth: TokenAuthHandler) -> list[Inventario]
 **Parâmetros:**
 - `token_auth`: Objeto TokenAuthHandler para autenticação
 
-**Retorno:** Lista de objetos da classe `Inventario` com dados de todas as estações no Brasil
+**Retorno:** Lista de objetos da classe `Inventario` com dados de todas as estações cadastradas no HIDRO
 
 **Exemplo de Uso:**
 
@@ -205,17 +206,17 @@ for estacao in todas_estacoes[:5]:  # Primeiras 5 estações
 
 #### `retorna_inventario_completo()`
 
-Retorna o inventário completo de todas as estações monitoradas pela API HIDRO ANA em formato de dicionários Python.
+Retorna o inventário completo de todas as estações monitoradas pela API HIDRO ANA em formato de dicionários Python. Os dicionários são idênticos ao JSON retornado pela API, ou seja, os dados dos dicionários são todos do tipo `str`
 
 **Assinatura:**
 ```python
-retorna_inventario_completo(token_auth: TokenAuthHandler) -> list[dict]
+retorna_inventario_completo(token_auth: TokenAuthHandler) -> list[dict[CampoInventario, str]]
 ```
 
 **Parâmetros:**
 - `token_auth`: Objeto TokenAuthHandler para autenticação
 
-**Retorno:** Lista de dicionários com dados de todas as estações no Brasil
+**Retorno:** Lista de dicionários com informações cadastrais de todas as estações do HIDRO
 
 **Exemplo de Uso:**
 
@@ -235,12 +236,12 @@ todas_estacoes = retorna_inventario_completo(token_auth=token_auth)
 
 print(f"Total de estações: {len(todas_estacoes)}")
 
-# Filtrar estações por tipo (exemplo: estações de chuva)
+# Filtrar estações por tipo (exemplo: estações pluviométricas)
 estacoes_chuva = [
     est for est in todas_estacoes 
-    if est.get('tipomedicao') == 'Chuva'
+    if est.get("Tipo_Estacao") == "Pluviometrica"
 ]
-print(f"Estações de chuva: {len(estacoes_chuva)}")
+print(f"Estações Pluviométricas: {len(estacoes_chuva)}")
 ```
 
 ---
@@ -267,7 +268,7 @@ serie_historica_chuva(
 - `data_inicial`: Data inicial no formato "YYYY-MM-DD"
 - `data_final`: Data final no formato "YYYY-MM-DD"
 
-**Retorno:** Lista de objetos `DadosDoMesChuva` contendo dados mensais de chuva
+**Retorno:** Lista de objetos `DadosDoMesChuva` contendo dados diários de chuva em determinaddo mês/ano da série
 
 **Exceções:**
 - `TimeSerieNotFoundError`: Lançada quando nenhum dado é encontrado para o período
@@ -288,7 +289,7 @@ token_auth = TokenAuthHandler(credenciais)
 # Obter dados de chuva de uma estação para um período específico
 dados_chuva = serie_historica_chuva(
     token_auth=token_auth,
-    codigoestacao=67120000,
+    codigoestacao=862000,
     data_inicial="2023-01-01",
     data_final="2023-12-31"
 )
@@ -296,14 +297,14 @@ dados_chuva = serie_historica_chuva(
 # Processar os dados
 for dado in dados_chuva:
     print(f"Mês/Ano: {dado.data_hora_dado.strftime('%m/%Y')}")
-    print(f"Chuva Total: {dado.chuva_total} mm")
-    print(f"Dias com Chuva: {dado.dias_chuva}")
+    print(f"Chuva Total: {dado.total} mm")
+    print(f"Dias com Chuva: {dado.numero_dias_de_chuva}")
     print("---")
 
 # Calcular precipitação total do período
 precipitacao_total = sum(
-    dado.chuva_total for dado in dados_chuva 
-    if dado.chuva_total is not None
+    dado.total for dado in dados_chuva 
+    if dado.total is not None
 )
 print(f"Precipitação Total: {precipitacao_total} mm")
 ```
@@ -330,7 +331,7 @@ serie_historica_cota(
 - `data_inicial`: Data inicial no formato "YYYY-MM-DD"
 - `data_final`: Data final no formato "YYYY-MM-DD"
 
-**Retorno:** Lista de objetos `DadosDoMesCota` contendo dados mensais de cota
+**Retorno:** Lista de objetos `DadosDoMesCota` contendo dados diários de cota em determinaddo mês/ano da série
 
 **Exceções:**
 - `TimeSerieNotFoundError`: Lançada quando nenhum dado é encontrado para o período
@@ -351,25 +352,25 @@ token_auth = TokenAuthHandler(credenciais)
 # Obter dados de cota (nível de água) para um período
 dados_cota = serie_historica_cota(
     token_auth=token_auth,
-    codigoestacao=67120000,
+    codigoestacao=10100000,
     data_inicial="2023-01-01",
     data_final="2023-12-31"
 )
 
 # Analisar os dados
 for dado in dados_cota:
-    print(f"Período: {dado.mes}/{dado.ano}")
-    print(f"Cota Máxima: {dado.cota_maxima} m")
-    print(f"Cota Mínima: {dado.cota_minima} m")
-    print(f"Cota Média: {dado.cota_media} m")
+    print(f"Período: {dado.data_hora_dado.strftime('%m/%Y')}")
+    print(f"Cota Máxima: {dado.maxima} m")
+    print(f"Cota Mínima: {dado.minima} m")
+    print(f"Cota Média: {dado.media} m")
     print("---")
 
 # Encontrar mês com maior cota máxima
 cota_maior = max(
     dados_cota,
-    key=lambda x: x.cota_maxima if x.cota_maxima is not None else 0
+    key=lambda x: x.maxima if x.maxima is not None else 0
 )
-print(f"Maior cota: {cota_maior.cota_maxima} m em {cota_maior.mes}/{cota_maior.ano}")
+print(f"Maior cota: {cota_maior.maxima} m em {cota_maior.data_hora_dado.strftime('%m/%Y')}")
 ```
 
 ---
@@ -415,24 +416,24 @@ token_auth = TokenAuthHandler(credenciais)
 # Obter dados de vazão para um período específico
 dados_vazao = serie_historica_vazao(
     token_auth=token_auth,
-    codigoestacao=67120000,
+    codigoestacao=10100000,
     data_inicial="2022-01-01",
     data_final="2022-12-31"
 )
 
 # Analisar dados de vazão
 for dado in dados_vazao:
-    print(f"Mês/Ano: {dado.mes}/{dado.ano}")
-    print(f"Vazão Máxima: {dado.vazao_maxima} m³/s")
-    print(f"Vazão Mínima: {dado.vazao_minima} m³/s")
-    print(f"Vazão Média: {dado.vazao_media} m³/s")
+    print(f"Mês/Ano: {dado.data_hora_dado.strftime('%m/%Y')}")
+    print(f"Vazão Máxima: {dado.maxima} m³/s")
+    print(f"Vazão Mínima: {dado.minima} m³/s")
+    print(f"Vazão Média: {dado.media} m³/s")
     print("---")
 
 # Calcular vazão média anual
 vazao_media_anual = sum(
-    dado.vazao_media for dado in dados_vazao 
-    if dado.vazao_media is not None
-) / len([d for d in dados_vazao if d.vazao_media is not None])
+    dado.media for dado in dados_vazao 
+    if dado.media is not None
+) / len([d for d in dados_vazao if d.media is not None])
 print(f"Vazão Média Anual: {vazao_media_anual:.2f} m³/s")
 ```
 
@@ -484,7 +485,7 @@ token_auth = TokenAuthHandler(credenciais)
 # Obter dados telemétricos com intervalo de 1 hora
 dados_telemetrica = serie_historica_telemetrica_adotada(
     token_auth=token_auth,
-    codigoestacao=67120000,
+    codigoestacao=10100000,
     data_inicial="2024-01-01",
     data_final="2024-01-10",
     intervalo_busca="HORA_1"
