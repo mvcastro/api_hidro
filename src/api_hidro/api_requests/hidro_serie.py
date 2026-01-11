@@ -1,15 +1,14 @@
-from api_hidro.models.api_response_models import JSONAPIResponse
 import asyncio
 from datetime import datetime
 from typing import Literal, cast
 
 from api_hidro.api_requests.sync_request import http_get_sync
 from api_hidro.errors import TimeSerieNotFoundError
-from api_hidro.models.api_response_models import JSONList
+from api_hidro.models.api_response_models import JSONAPIResponse, JSONList
 from api_hidro.models.models import (
-    DadosDoMesChuva,
-    DadosDoMesCota,
-    DadosDoMesVazao,
+    DadosMesAnoChuva,
+    DadosMesAnoCota,
+    DadosMesAnoVazao,
 )
 from api_hidro.token_authentication import TokenAuthHandler
 from api_hidro.utils import flatten_concatenation
@@ -92,7 +91,7 @@ def retorna_serie_historica(
 
     Args:
         codigoestacao (int): Código da estação
-        tipo_estacao (TipoDeEstacao): Tipos -> 'Chuva', 'Cota', 'Vazao'
+        tipo_estacao (TipoDeEstacao): Tipos -> 'Chuva', 'Cotas', 'Vazao'
         data_inicial (str): Data no formato YYYY-MM-DD
         data_final (str): Data no formato YYYY-MM-DD
 
@@ -109,7 +108,7 @@ def retorna_serie_historica(
 
 def serie_historica_chuva(
     token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
-) -> list[DadosDoMesChuva]:
+) -> list[DadosMesAnoChuva]:
     """Retorna Série Histórica de Chuvas da estação escolhida
 
     Args:
@@ -137,12 +136,12 @@ def serie_historica_chuva(
             f"Série histórica de chuva não encontrada para o código da estação {codigoestacao}."
         )
 
-    return [DadosDoMesChuva.model_validate(item) for item in serie_diaria_chuva]
+    return [DadosMesAnoChuva.model_validate(item) for item in serie_diaria_chuva]
 
 
 def serie_historica_cota(
     token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
-) -> list[DadosDoMesCota]:
+) -> list[DadosMesAnoCota]:
     """Retorna Série Histórica de Cotas da estação escolhida
 
     Args:
@@ -160,7 +159,7 @@ def serie_historica_cota(
     serie_diaria_cota = retorna_serie_historica(
         token_auth=token_auth,
         codigoestacao=codigoestacao,
-        tipo_estacao="Cota",
+        tipo_estacao="Cotas",
         data_inicial=data_inicial,
         data_final=data_final,
     )
@@ -170,12 +169,12 @@ def serie_historica_cota(
             f"Série histórica de cota não encontrada para o código da estação {codigoestacao}."
         )
 
-    return [DadosDoMesCota.model_validate(item) for item in serie_diaria_cota]
+    return [DadosMesAnoCota.model_validate(item) for item in serie_diaria_cota]
 
 
 def serie_historica_vazao(
     token_auth: TokenAuthHandler, codigoestacao: int, data_inicial: str, data_final: str
-) -> list[DadosDoMesVazao]:
+) -> list[DadosMesAnoVazao]:
     """Retorna Série Histórica de Vazões da estação escolhida
 
     Args:
@@ -204,6 +203,6 @@ def serie_historica_vazao(
         )
 
     return [
-        DadosDoMesVazao.model_validate(item, by_alias=True)
+        DadosMesAnoVazao.model_validate(item, by_alias=True)
         for item in serie_diaria_vazao
     ]

@@ -5,7 +5,7 @@ class DummyToken:
     def __enter__(self):
         return "fake-token"
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         return False
 
 

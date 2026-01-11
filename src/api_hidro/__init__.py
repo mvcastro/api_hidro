@@ -13,7 +13,6 @@ from api_hidro.api_requests.hidro_telemetrica import (
     serie_historica_telemetrica_adotada,
     serie_historica_telemetrica_detalhada,
 )
-from api_hidro.token_authentication import TokenAuthHandler
 
 __all__ = [
     "retorna_inventario",
@@ -25,5 +24,4 @@ __all__ = [
     "serie_historica_vazao",
     "serie_historica_telemetrica_adotada",
     "serie_historica_telemetrica_detalhada",
-    "TokenAuthHandler",
 ]

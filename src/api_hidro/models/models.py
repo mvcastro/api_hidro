@@ -92,16 +92,18 @@ class _DadoDiario(BaseModel, ABC):
     dia_maxima: int
     maxima: float
     maxima_status: bool
-    nivel_consistencia: int = Field(ge=1, le=2)
 
     model_config = ConfigDict(
         populate_by_name=True, alias_generator=lambda s: s.title()
     )
 
 
-class DadosDoMesChuva(_DadoDiario):
+class DadosMesAnoChuva(_DadoDiario):
+    nivel_consistencia: int = Field(ge=1, le=2)
     numero_dias_de_chuva: int | None = Field(alias="Numero_Dias_de_Chuva")
-    numero_dias_de_chuva_status: bool | None = Field(alias="Numero_Dias_de_Chuva_Status")
+    numero_dias_de_chuva_status: bool | None = Field(
+        alias="Numero_Dias_de_Chuva_Status"
+    )
     tipo_medicao_chuvas: int | None
     total: float | None
     total_anual: float | None
@@ -175,7 +177,7 @@ class DadosDoMesChuva(_DadoDiario):
     )
 
 
-class DadosDoMesCota(_DadoDiario):
+class DadosMesAnoCota(_DadoDiario):
     dia_minima: int
     media: float
     media_anual: float | None
@@ -184,6 +186,7 @@ class DadosDoMesCota(_DadoDiario):
     mediadiaria: float
     minima: float
     minima_status: bool
+    nivelconsistencia: int = Field(ge=1, le=2)
     tipo_medicao_cotas: int | None
     cota_01: float | None
     cota_02: float | None
@@ -253,7 +256,7 @@ class DadosDoMesCota(_DadoDiario):
     )
 
 
-class DadosDoMesVazao(_DadoDiario):
+class DadosMesAnoVazao(_DadoDiario):
     dia_minima: int
     media: float
     media_anual: float | None
@@ -263,6 +266,7 @@ class DadosDoMesVazao(_DadoDiario):
     metodo_obtencao_vazoes: int
     minima: float
     minima_status: bool
+    nivel_consistencia: int = Field(ge=1, le=2)
     vazao_01: float | None
     vazao_02: float | None
     vazao_03: float | None

@@ -1,6 +1,6 @@
 import pytest
 
-from api_hidro.async_requests import hidro_inventario as hi
+from api_hidro.api_requests import hidro_inventario as hi
 from api_hidro.errors import ArgsNotGivenError, InventoryNotFoundError
 
 

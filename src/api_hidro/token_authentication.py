@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from types import TracebackType
 
 import requests
 from pydantic.main import BaseModel
@@ -51,4 +52,9 @@ class TokenAuthHandler:
             self.refresh_token()
         return self.__token_auth
 
-    def __exit__(self, exc_type, exc_value, traceback): ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
+    ): ...
