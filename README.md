@@ -262,6 +262,7 @@ Resultado:
 ```
 Nome da Estação: TABATINGA
 Rio: RIO SOLIMÕES-AMAZONAS
+Área de Drenagem (Km²): 874000.0
 Entidade Responsável: ANA
 Coordenadas: (-4.2347, -69.9447)
 ```
